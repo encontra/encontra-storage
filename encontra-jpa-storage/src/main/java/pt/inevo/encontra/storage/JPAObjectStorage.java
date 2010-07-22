@@ -78,11 +78,12 @@ public class JPAObjectStorage<I extends Serializable,T extends IEntity<I>> imple
 
 
   @Override
-  public void save(final T object) {
+  public T save(final T object) {
     if (object.getId() != null) {
-      entityManager.merge(object);
+      return entityManager.merge(object);
     } else {
       entityManager.persist(object);
+      return object;
     }
   }
 
