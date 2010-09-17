@@ -8,13 +8,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
-import javax.persistence.Basic;
-import javax.persistence.Column;
-import javax.persistence.EntityManager;
-import javax.persistence.EntityNotFoundException;
-import javax.persistence.NoResultException;
-import javax.persistence.NonUniqueResultException;
-import javax.persistence.PersistenceContext;
+import javax.persistence.*;
 
 
 /**
@@ -39,12 +33,12 @@ public class JPAObjectStorage<I extends Serializable,T extends IEntity<I>> imple
 
     Type[] types = ((ParameterizedType) getClass().getGenericSuperclass()).getActualTypeArguments();
 
-    if (types[0] instanceof ParameterizedType) {
+    if (types[1] instanceof ParameterizedType) {
       // If the class has parameterized types, it takes the raw type.
-      ParameterizedType type = (ParameterizedType) types[0];
+      ParameterizedType type = (ParameterizedType) types[1];
       clazz = (Class<IEntity<I>>) type.getRawType();
     } else {
-      clazz = (Class<IEntity<I>>) types[0];
+      clazz = (Class<IEntity<I>>) types[1];
     }
   }
 
@@ -79,12 +73,15 @@ public class JPAObjectStorage<I extends Serializable,T extends IEntity<I>> imple
 
   @Override
   public T save(final T object) {
-    if (object.getId() != null) {
-      return entityManager.merge(object);
-    } else {
-      entityManager.persist(object);
-      return object;
-    }
+    T res=null;
+    EntityTransaction tx = entityManager.getTransaction();
+    tx.begin();
+
+    res=entityManager.merge(object);
+   
+    tx.commit();
+
+    return res;
   }
 
   @Override
