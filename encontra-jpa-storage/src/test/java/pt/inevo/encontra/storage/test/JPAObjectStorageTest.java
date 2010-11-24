@@ -52,6 +52,7 @@ public class JPAObjectStorageTest extends TestCase {
         assertNotNull(stored.getId());
 
         stored=storage.get(stored.getId());
+        System.out.println("Object id:" + stored.getId());
         assertNull(stored.getImage());
     }
 
