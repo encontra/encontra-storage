@@ -1,14 +1,11 @@
 package pt.inevo.encontra.storage.test;
 
-
 import junit.framework.TestCase;
-import pt.inevo.encontra.storage.IEntity;
 import pt.inevo.encontra.storage.JPAObjectStorage;
 
-import javax.imageio.ImageIO;
 import javax.persistence.*;
 import java.awt.image.BufferedImage;
-import java.io.File;
+import org.junit.Test;
 
 public class JPAObjectStorageTest extends TestCase {
 
@@ -22,6 +19,7 @@ public class JPAObjectStorageTest extends TestCase {
         super(name);
     }
 
+    @Override
     protected void setUp() throws Exception {
         super.setUp();
 
@@ -34,6 +32,7 @@ public class JPAObjectStorageTest extends TestCase {
 
     }
 
+    @Override
     protected void tearDown() throws Exception {
         em.close();
 
@@ -42,6 +41,7 @@ public class JPAObjectStorageTest extends TestCase {
 
     }
 
+    @Test
     public void testVectorize() {
         MyObject obj=new MyObject();
         obj.setName("A Test Object");
@@ -55,6 +55,4 @@ public class JPAObjectStorageTest extends TestCase {
         System.out.println("Object id:" + stored.getId());
         assertNull(stored.getImage());
     }
-
 }
-
