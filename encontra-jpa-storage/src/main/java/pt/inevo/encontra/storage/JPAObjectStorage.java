@@ -67,13 +67,12 @@ public class JPAObjectStorage<I extends Serializable,T extends IEntity<I>> imple
         //        return (T) entityManager.find(clazz, id);
 
         CriteriaBuilder builder = entityManager.getCriteriaBuilder();
-        CriteriaQuery q = builder.createQuery(clazz);
-        Path idPath = q.from(clazz).get("id");
+        CriteriaQuery criteria = builder.createQuery(clazz);
+        Root root=criteria.from(clazz);
+        criteria.select(root);
+        criteria.where(builder.equal(root.get("id"), id));
 
-        q = q.select(q.from(clazz));
-        q = q.where(builder.equal(idPath, id));
-
-        List result = entityManager.createQuery(q).getResultList();
+        List result = entityManager.createQuery(criteria).getResultList();
         if (result.size() > 0) {
             return (T)result.get(0);
         }
