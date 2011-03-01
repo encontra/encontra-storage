@@ -6,6 +6,7 @@ import pt.inevo.encontra.storage.JPAObjectStorage;
 import javax.persistence.*;
 import java.awt.image.BufferedImage;
 import org.junit.Test;
+import pt.inevo.encontra.storage.StorageCriteria;
 
 public class JPAObjectStorageTest extends TestCase {
 
@@ -54,5 +55,16 @@ public class JPAObjectStorageTest extends TestCase {
         stored=storage.get(stored.getId());
         System.out.println("Object id:" + stored.getId());
         assertNull(stored.getImage());
+    }
+
+    @Test
+    public void testStorage() {
+        MyObject obj=new MyObject();
+        obj.setName("A Test Object");
+        obj.setImage(new BufferedImage(100,100,BufferedImage.TYPE_INT_RGB));
+
+        MyObject stored=storage.save(obj);
+
+        assertNotNull(storage.get(stored.getId()));
     }
 }
