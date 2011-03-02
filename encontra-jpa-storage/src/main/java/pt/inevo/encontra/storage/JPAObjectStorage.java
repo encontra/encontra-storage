@@ -4,10 +4,10 @@ import java.io.Serializable;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.List;
+import java.util.Set;
 
 import javax.persistence.*;
 import javax.persistence.criteria.*;
-
 
 /**
  * Abstract implementation of generic DAO.
@@ -19,7 +19,7 @@ import javax.persistence.criteria.*;
 public class JPAObjectStorage<I extends Serializable,T extends IEntity<I>> implements ObjectStorage<I,T> {
 
     private EntityManager entityManager;
-
+    private CriteriaBuilder builder;
     private Class<IEntity<I>> clazz;
 
 
@@ -64,20 +64,34 @@ public class JPAObjectStorage<I extends Serializable,T extends IEntity<I>> imple
     @SuppressWarnings(value = "unchecked")
     @Override
     public T get(I id) {
-        //        return (T) entityManager.find(clazz, id);
+        return (T) entityManager.find(clazz, id);
+    }
 
-        CriteriaBuilder builder = entityManager.getCriteriaBuilder();
-        CriteriaQuery criteria = builder.createQuery(clazz);
-        Root root=criteria.from(clazz);
-        criteria.select(root);
-        criteria.where(builder.equal(root.get("id"), id));
+    @SuppressWarnings(value = "unchecked")
+    @Override
+    public T get(I id, String criteria) {
+        if (criteria == null) {
+            return (T) entityManager.find(clazz, id);
+        } else {
+            CriteriaBuilder builder = getStorageCriteriaBuilder();
+            CriteriaQuery q = builder.createQuery(clazz);
+            Root root = q.from(clazz);    //get the main root
 
-        List result = entityManager.createQuery(criteria).getResultList();
-        if (result.size() > 0) {
-            return (T)result.get(0);
+            Class idType = root.getModel().getIdType().getJavaType();
+            String idName = root.getModel().getId(idType).getName();
+
+            String query = "select a from " + clazz.getName() + " a where " + idName + "=:id and ";
+            query += criteria;
+            TypedQuery criteriaQuery = entityManager.createQuery(query, clazz);
+            criteriaQuery.setParameter("id", id);
+
+            List result = criteriaQuery.getResultList();
+            if (result.size() > 0) {
+                return (T)result.get(0);
+            }
+//            //can't find the object
+            return null;
         }
-        //can't find the object
-        return null;
     }
 
     @Override
@@ -129,5 +143,12 @@ public class JPAObjectStorage<I extends Serializable,T extends IEntity<I>> imple
      */
     protected EntityManager getEntityManager() {
         return entityManager;
+    }
+
+    public CriteriaBuilder getStorageCriteriaBuilder() {
+        if (builder == null){
+            builder = entityManager.getCriteriaBuilder();
+        }
+        return builder;
     }
 }
