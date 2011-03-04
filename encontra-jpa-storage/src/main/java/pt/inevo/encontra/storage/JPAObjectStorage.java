@@ -1,5 +1,7 @@
 package pt.inevo.encontra.storage;
 
+import pt.inevo.encontra.query.criteria.StorageCriteria;
+
 import java.io.Serializable;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -67,31 +69,44 @@ public class JPAObjectStorage<I extends Serializable,T extends IEntity<I>> imple
         return (T) entityManager.find(clazz, id);
     }
 
-    @SuppressWarnings(value = "unchecked")
     @Override
-    public T get(I id, String criteria) {
-        if (criteria == null) {
-            return (T) entityManager.find(clazz, id);
-        } else {
-            CriteriaBuilder builder = getStorageCriteriaBuilder();
-            CriteriaQuery q = builder.createQuery(clazz);
-            Root root = q.from(clazz);    //get the main root
+    public boolean validate(I id, StorageCriteria criteria){
+        CriteriaBuilder builder = getStorageCriteriaBuilder();
+        CriteriaQuery q = builder.createQuery(clazz);
+        Root root = q.from(clazz);    //get the main root
 
-            Class idType = root.getModel().getIdType().getJavaType();
-            String idName = root.getModel().getId(idType).getName();
+        Class idType = root.getModel().getIdType().getJavaType();
+        String idName = root.getModel().getId(idType).getName();
 
-            String query = "select a from " + clazz.getName() + " a where " + idName + "=:id and ";
-            query += criteria;
-            TypedQuery criteriaQuery = entityManager.createQuery(query, clazz);
-            criteriaQuery.setParameter("id", id);
+        String query = "select count(a." + idName + ") from " + clazz.getName() + " a where " + idName + "=:id and ";
+        query += criteria.getCriteria();
+        TypedQuery criteriaQuery = entityManager.createQuery(query, Long.class);
+        criteriaQuery.setParameter("id", id);
 
-            List result = criteriaQuery.getResultList();
-            if (result.size() > 0) {
-                return (T)result.get(0);
-            }
-//            //can't find the object
-            return null;
+        Long result = Long.parseLong(criteriaQuery.getSingleResult().toString());
+        if (result > 0) {
+            return true;
         }
+
+        return false;
+    }
+
+    @Override
+    public List<I> getValidIds(StorageCriteria criteria){
+        CriteriaBuilder builder = getStorageCriteriaBuilder();
+        CriteriaQuery q = builder.createQuery(clazz);
+        Root root = q.from(clazz);    //get the main root
+
+        Class idType = root.getModel().getIdType().getJavaType();
+        String idName = root.getModel().getId(idType).getName();
+
+        String query = "select a." + idName + " from " + clazz.getName() + " a where ";
+        query += criteria.getCriteria();
+        TypedQuery criteriaQuery = entityManager.createQuery(query, idType);
+
+        List result = criteriaQuery.getResultList();
+
+        return result;
     }
 
     @Override
