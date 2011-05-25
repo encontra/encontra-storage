@@ -16,6 +16,7 @@
 
      <modules>
          <module>encontra-jpa-storage</module>
+         <module>encontra-cmis-storage</module>
      </modules>
 
 </project>
