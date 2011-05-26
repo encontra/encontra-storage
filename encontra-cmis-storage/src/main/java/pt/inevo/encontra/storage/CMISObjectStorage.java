@@ -1,5 +1,6 @@
 package pt.inevo.encontra.storage;
 
+import org.apache.chemistry.opencmis.commons.definitions.PropertyDefinition;
 import org.apache.commons.io.IOUtils;
 import org.apache.chemistry.opencmis.client.api.*;
 import org.apache.chemistry.opencmis.client.runtime.SessionFactoryImpl;
@@ -15,11 +16,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
+import javax.persistence.TypedQuery;
 import javax.persistence.criteria.*;
 
 /**
@@ -35,29 +34,11 @@ public class CMISObjectStorage<T extends CmisObject> implements ObjectStorage<St
     private static Session session;
     private Folder cmisObjectStorage;
 
-    static {
-        // default factory implementation
-        SessionFactory factory = SessionFactoryImpl.newInstance();
-        Map<String, String> parameter = new HashMap<String, String>();
-
-        // user credentials
-        parameter.put(SessionParameter.USER, "");
-        parameter.put(SessionParameter.PASSWORD, "");
-
-        // connection settings
-        parameter.put(SessionParameter.ATOMPUB_URL, "http://localhost:8080/chemistry-opencmis-server-inmemory-0.3.0/atom");
-        parameter.put(SessionParameter.BINDING_TYPE, BindingType.ATOMPUB.value());
-        parameter.put(SessionParameter.REPOSITORY_ID, "A1");
-
-        // create session
-        session = factory.createSession(parameter);
-    }
-
     /**
      * Default constructor. Use for extend this class.
      */
     @SuppressWarnings(value = "unchecked")
-    public CMISObjectStorage() {
+    public CMISObjectStorage(Map<String, String> parameters) {
 
         Type[] types = ((ParameterizedType) getClass().getGenericSuperclass()).getActualTypeArguments();
 
@@ -68,7 +49,7 @@ public class CMISObjectStorage<T extends CmisObject> implements ObjectStorage<St
         } else {
             clazz = (Class<T>) types[0];
         }
-        init();
+        init(parameters);
     }
 
     /**
@@ -78,36 +59,64 @@ public class CMISObjectStorage<T extends CmisObject> implements ObjectStorage<St
      * @param clazz class with will be accessed by DAO methods
      */
     @SuppressWarnings(value = "unchecked")
-    public CMISObjectStorage(Class<T> clazz) {
+    public CMISObjectStorage(Class<T> clazz, Map<String, String> parameters) {
         this.clazz = clazz;
-        init();
+        init(parameters);
     }
 
     /**
      * Creates a folder to hold the CmisObjects that will be created in the CMIS.
      */
-    private void init() {
+    private void init(Map<String, String> parameters) {
+        // default factory implementation
+        SessionFactory factory = SessionFactoryImpl.newInstance();
+                // create session
+        session = factory.createSession(parameters);
         cmisObjectStorage = session.getRootFolder();
 
-        // (minimal set: name and object type id)
-        Map<String, Object> properties = new HashMap<String, Object>();
-        properties.put(PropertyIds.OBJECT_TYPE_ID, "cmis:folder");
-        properties.put(PropertyIds.NAME, "CMISObjectStorage");
+        String queryString = "SELECT  * FROM cmis:folder WHERE " + PropertyIds.NAME + "='CMISObjectStorage'";
+        ItemIterable<QueryResult> result = session.query(queryString, false);
+        long numberResults = result.getTotalNumItems();
+        if (numberResults == -1) {
+            // (minimal set: name and object type id)
+            Map<String, Object> properties = new HashMap<String, Object>();
+            properties.put(PropertyIds.OBJECT_TYPE_ID, "cmis:folder");
+            properties.put(PropertyIds.NAME, "CMISObjectStorage");
 
-        // create the folder
-        cmisObjectStorage = cmisObjectStorage.createFolder(properties);
+            // create the folder
+            cmisObjectStorage = cmisObjectStorage.createFolder(properties);
+        } else {
+            String storageType = "cmis:folder";
+            // get the query name of cmis:objectId
+            ObjectType type = session.getTypeDefinition(storageType);
+            PropertyDefinition<?> objectIdPropDef = type.getPropertyDefinitions().get(PropertyIds.OBJECT_ID);
+            String objectIdQueryName = objectIdPropDef.getQueryName();
+
+            Iterator<QueryResult> it = result.iterator();
+            QueryResult qr = it.next();
+            String objectId = qr.getPropertyValueByQueryName(objectIdQueryName);
+            ObjectId id = session.createObjectId(objectId);
+            cmisObjectStorage = (Folder) session.getObject(id);
+        }
     }
 
     @SuppressWarnings(value = "unchecked")
     @Override
     public T get(String id) {
-
         ObjectId objId = session.createObjectId(id);
         Document document = (Document)session.getObject(objId);
+        return getObject(id, document);
+    }
+
+    /**
+     * Given a document it retrieved the respective CmisObject / IEntity
+     * @param id
+     * @param document
+     * @return
+     */
+    private T getObject(String id, Document document) {
 
         InputStream contentStream = document.getContentStream().getStream();
-
-        long length = 0;
         try {
             byte [] bytes = IOUtils.toByteArray(contentStream);
             T object = clazz.newInstance();
@@ -128,14 +137,38 @@ public class CMISObjectStorage<T extends CmisObject> implements ObjectStorage<St
 
     @Override
     public boolean validate(String id, StorageCriteria criteria){
-        //TO DO
+        ObjectId objId = session.createObjectId(id);
+        String queryString = "SELECT * FROM cmis:document WHERE cmis:objectId='" + objId.getId() + "' AND " + criteria.getCriteria();
+        ItemIterable<QueryResult> results = session.query(queryString, false);
+        //if results >= 0 then the id is valid
+        if (results.getTotalNumItems() > 0)
+            return true;
+
         return false;
     }
 
     @Override
     public List<String> getValidIds(StorageCriteria criteria){
-        //TO DO
-        return null;
+        List<String> ids = new ArrayList<String>();
+        String storageType = "cmis:document";
+
+        // get the query name of cmis:objectId
+        ObjectType type = session.getTypeDefinition(storageType);
+        PropertyDefinition<?> objectIdPropDef = type.getPropertyDefinitions().get(PropertyIds.OBJECT_ID);
+        String objectIdQueryName = objectIdPropDef.getQueryName();
+
+        String queryString = "SELECT " + objectIdQueryName + " FROM " + type.getQueryName() + " WHERE " + criteria.getCriteria();
+
+        // execute query
+        ItemIterable<QueryResult> results = session.query(queryString, false);
+
+        for (QueryResult qResult : results) {
+            String objectId = qResult.getPropertyValueByQueryName(objectIdQueryName);
+            ids.add(objectId);
+            //Retrieve the object
+            //Document doc = (Document) session.getObject(session.createObjectId(objectId));
+        }
+        return ids;
     }
 
     @Override
@@ -160,8 +193,7 @@ public class CMISObjectStorage<T extends CmisObject> implements ObjectStorage<St
         //get the folder id
         ObjectId folderId = session.createObjectId(cmisObjectStorage.getId());
 
-        //TO DO - document must be versionable
-        ObjectId objectId = session.createDocument(properties, folderId, contentStream, VersioningState.NONE);
+        ObjectId objectId = session.createDocument(properties, folderId, contentStream, VersioningState.MAJOR);
         String id = objectId.getId();
 
         //update the name of the newly saved cmis object
@@ -177,14 +209,17 @@ public class CMISObjectStorage<T extends CmisObject> implements ObjectStorage<St
 
     @Override
     public void save(final T... objects) {
-        //TO DO
-        return;
+        //save all the objects, one by one
+        for (T object : objects) {
+            save(object);
+        }
     }
 
     @Override
     public void delete(final T object)  {
-        //TO DO
-        return;
+        ObjectId objId = session.createObjectId(object.getId());
+        org.apache.chemistry.opencmis.client.api.CmisObject cmisObject = session.getObject(objId);
+        cmisObject.delete(true);
     }
 
     public void refresh(final T entity) {
