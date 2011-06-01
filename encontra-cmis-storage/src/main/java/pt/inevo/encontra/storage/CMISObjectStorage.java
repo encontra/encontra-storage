@@ -70,7 +70,7 @@ public class CMISObjectStorage<T extends CmisObject> implements ObjectStorage<St
     private void init(Map<String, String> parameters) {
         // default factory implementation
         SessionFactory factory = SessionFactoryImpl.newInstance();
-                // create session
+        // create session
         session = factory.createSession(parameters);
         cmisObjectStorage = session.getRootFolder();
 
@@ -162,11 +162,11 @@ public class CMISObjectStorage<T extends CmisObject> implements ObjectStorage<St
         // execute query
         ItemIterable<QueryResult> results = session.query(queryString, false);
 
-        for (QueryResult qResult : results) {
-            String objectId = qResult.getPropertyValueByQueryName(objectIdQueryName);
-            ids.add(objectId);
-            //Retrieve the object
-            //Document doc = (Document) session.getObject(session.createObjectId(objectId));
+        if (results.getTotalNumItems() > 0) {
+            for (QueryResult qResult : results) {
+                String objectId = qResult.getPropertyValueByQueryName(objectIdQueryName);
+                ids.add(objectId);
+            }
         }
         return ids;
     }
