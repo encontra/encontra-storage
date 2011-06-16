@@ -1,25 +1,21 @@
 package pt.inevo.encontra.storage;
 
-import org.apache.chemistry.opencmis.commons.definitions.PropertyDefinition;
-import org.apache.commons.io.IOUtils;
 import org.apache.chemistry.opencmis.client.api.*;
 import org.apache.chemistry.opencmis.client.runtime.SessionFactoryImpl;
 import org.apache.chemistry.opencmis.commons.PropertyIds;
-import org.apache.chemistry.opencmis.commons.SessionParameter;
 import org.apache.chemistry.opencmis.commons.data.ContentStream;
-import org.apache.chemistry.opencmis.commons.enums.BindingType;
+import org.apache.chemistry.opencmis.commons.definitions.PropertyDefinition;
 import org.apache.chemistry.opencmis.commons.enums.VersioningState;
+import org.apache.commons.io.IOUtils;
 import pt.inevo.encontra.query.criteria.StorageCriteria;
 
+import javax.persistence.criteria.CriteriaBuilder;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.*;
-
-import javax.persistence.TypedQuery;
-import javax.persistence.criteria.*;
 
 /**
  * Abstract implementation of generic DAO.
@@ -74,7 +70,7 @@ public class CMISObjectStorage<T extends CmisObject> implements ObjectStorage<St
         session = factory.createSession(parameters);
         cmisObjectStorage = session.getRootFolder();
 
-        String queryString = "SELECT  * FROM cmis:folder WHERE " + PropertyIds.NAME + "='CMISObjectStorage'";
+        /*String queryString = "SELECT  * FROM cmis:folder WHERE " + PropertyIds.NAME + "='CMISObjectStorage'";
         ItemIterable<QueryResult> result = session.query(queryString, false);
         long numberResults = result.getTotalNumItems();
         if (numberResults == -1) {
@@ -97,7 +93,7 @@ public class CMISObjectStorage<T extends CmisObject> implements ObjectStorage<St
             String objectId = qr.getPropertyValueByQueryName(objectIdQueryName);
             ObjectId id = session.createObjectId(objectId);
             cmisObjectStorage = (Folder) session.getObject(id);
-        }
+        } */
     }
 
     @SuppressWarnings(value = "unchecked")
