@@ -1,18 +1,13 @@
 package pt.inevo.encontra.storage.test;
 
 import junit.framework.TestCase;
-import org.apache.chemistry.opencmis.commons.SessionParameter;
-import org.apache.chemistry.opencmis.commons.enums.BindingType;
+import org.junit.Test;
 import pt.inevo.encontra.query.criteria.StorageCriteria;
 import pt.inevo.encontra.storage.CMISObjectStorage;
 
-import javax.naming.Binding;
-import javax.persistence.*;
 import java.awt.image.BufferedImage;
 import java.io.FileInputStream;
 import java.util.*;
-
-import org.junit.Test;
 
 public class CMISObjectStorageTest extends TestCase {
 
