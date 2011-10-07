@@ -69,6 +69,7 @@ public class CMISObjectStorage<T extends CmisObject> implements ObjectStorage<St
         // create session
 
         session = factory.createSession(parameters);
+
         cmisObjectStorage = session.getRootFolder();
 
         /*String queryString = "SELECT  * FROM cmis:folder WHERE " + PropertyIds.NAME + "='CMISObjectStorage'";
@@ -190,7 +191,7 @@ public class CMISObjectStorage<T extends CmisObject> implements ObjectStorage<St
         //get the folder id
         ObjectId folderId = session.createObjectId(cmisObjectStorage.getId());
 
-        ObjectId objectId = session.createDocument(properties, folderId, contentStream, VersioningState.MAJOR);
+        ObjectId objectId = session.createDocument(properties, folderId, contentStream, VersioningState.NONE); //MAJOR);
         String id = objectId.getId();
 
         //update the name of the newly saved cmis object
