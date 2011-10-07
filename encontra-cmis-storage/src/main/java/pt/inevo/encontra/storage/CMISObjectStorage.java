@@ -25,10 +25,10 @@ import java.util.*;
  */
 public class CMISObjectStorage<T extends CmisObject> implements ObjectStorage<String, T> {
 
-    private CriteriaBuilder builder;
-    private Class<T> clazz;
-    private static Session session;
-    private Folder cmisObjectStorage;
+    protected CriteriaBuilder builder;
+    protected Class<T> clazz;
+    protected static Session session;
+    protected Folder cmisObjectStorage;
 
     /**
      * Default constructor. Use for extend this class.
@@ -63,10 +63,11 @@ public class CMISObjectStorage<T extends CmisObject> implements ObjectStorage<St
     /**
      * Creates a folder to hold the CmisObjects that will be created in the CMIS.
      */
-    private void init(Map<String, String> parameters) {
+    protected void init(Map<String, String> parameters) {
         // default factory implementation
         SessionFactory factory = SessionFactoryImpl.newInstance();
         // create session
+
         session = factory.createSession(parameters);
         cmisObjectStorage = session.getRootFolder();
 
